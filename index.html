@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Uno Leaderboard Auto-Rotator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bowling Honor Roll Rotator</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -19,73 +20,80 @@
       background: #1e1e1e;
       border: 1px solid #333;
       border-radius: 12px;
-      padding: 32px 48px;
+      padding: 36px 48px;
       text-align: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+      max-width: 420px;
     }
-    h1 { margin-top: 0; font-size: 22px; color: #90caf9; }
+    h1 { margin-top: 0; font-size: 20px; color: #90caf9; }
     .status {
-      font-size: 28px;
+      font-size: 26px;
       font-weight: bold;
       color: #4caf50;
       margin: 20px 0 10px 0;
     }
     .timer { font-size: 14px; color: #888; }
+    .log { font-size: 12px; color: #aaa; margin-top: 15px; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Bowling Honor Roll Rotator</h1>
+    <h1>Uno Leaderboard Rotator</h1>
     <div class="status" id="slotDisplay">Starting...</div>
     <div class="timer" id="timerDisplay">Rotating every 60 seconds</div>
+    <div class="log" id="logDisplay"></div>
   </div>
 
   <script>
     // ================= CONFIGURATION =================
-    // 1. Paste your actual Uno App API URL below:
+    // Paste your actual Uno App API URL (replace YOUR_APP_TOKEN if needed):
     const API_URL = "https://app.overlays.uno/apiv2/controlapps/5c0fHEqV4HgMnccvPEqK33/api";
     
-    // 2. Your Overlay ID:
+    // Your Leaderboard Overlay ID:
     const OVERLAY_ID = "4d686c9b-c0fa-494f-8d02-6be8b16759ee";
 
-    // 3. The 3 Slots in order:
-    const SLOTS = [
-      { name: "High Games", index: 0 },
-      { name: "High Series", index: 1 },
-      { name: "Youth High Scores", index: 2 }
-    ];
-
-    const INTERVAL_SECONDS = 10; // 1 minute per slide
+    // Names of your 3 slots in order:
+    const SLOTS = ["High Games", "High Series", "Youth High Scores"];
+    const INTERVAL_SECONDS = 60; // 60 seconds per slide
     // =================================================
 
-    let currentIdx = 0;
+    let currentSlotIndex = 0;
 
-    async function showNextSlot() {
-      const slot = SLOTS[currentIdx];
-      document.getElementById("slotDisplay").innerText = "On-Air: " + slot.name;
+    async function advanceToNextSlot() {
+      const slotName = SLOTS[currentSlotIndex];
+      document.getElementById("slotDisplay").innerText = "On-Air: " + slotName;
+
+      // Uno App API command to step to next slot
+      const payload = {
+        command: "TakeOverlayNextSlot",
+        id: OVERLAY_ID
+      };
 
       try {
-        await fetch(API_URL, {
+        const response = await fetch(API_URL, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            command: "ShowOverlay",
-            id: OVERLAY_ID,
-            slot: slot.name,
-            slotIndex: slot.index
-          })
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
         });
+        
+        document.getElementById("logDisplay").innerText = 
+          `Status: Sent switch command at ${new Date().toLocaleTimeString()}`;
       } catch (err) {
-        console.error("Failed to switch slot:", err);
+        console.error("Error switching slot:", err);
+        document.getElementById("logDisplay").innerText = `Error: ${err.message}`;
       }
 
-      // Cycle to the next slot (0 -> 1 -> 2 -> 0)
-      currentIdx = (currentIdx + 1) % SLOTS.length;
+      // Step local label to next slot
+      currentSlotIndex = (currentSlotIndex + 1) % SLOTS.length;
     }
 
-    // Trigger first slide immediately, then every 60s
-    showNextSlot();
-    setInterval(showNextSlot, INTERVAL_SECONDS * 1000);
+    // Trigger right away on page load
+    advanceToNextSlot();
+
+    // Repeat every 60 seconds
+    setInterval(advanceToNextSlot, INTERVAL_SECONDS * 1000);
   </script>
 </body>
 </html>
